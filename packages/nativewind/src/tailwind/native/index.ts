@@ -1,7 +1,6 @@
 import plugin from "tailwindcss/plugin";
 import { StyleError } from "../../types/common";
 import { boxShadow } from "./box-shadow";
-import { groupIsolate } from "./group-isolate";
 import { divide } from "./divide";
 import { elevation } from "./elevation";
 import { fontSize } from "./font-size";
@@ -19,7 +18,6 @@ import { pseudoClasses } from "./pseudo-classes";
 import { platforms, nativePlatforms } from "../../utils/platforms";
 import { boxShadowColor } from "./box-shadow-color";
 import { hairlineWidth } from "../../theme-functions";
-import { gap } from "./gap";
 
 // This is used by platformSelect to detect if we are in an
 // environment that can use Platform.select (ie not using CSS)
@@ -64,7 +62,6 @@ export const nativePlugin = plugin.withOptions<NativePluginOptions>(
       space(helpers, notSupported);
       divide(helpers, notSupported);
       fontSize(helpers);
-      gap(helpers, notSupported);
       lineHeight(helpers, notSupported);
       pseudoClasses(helpers, notSupported);
       elevation(helpers, notSupported);
@@ -74,7 +71,7 @@ export const nativePlugin = plugin.withOptions<NativePluginOptions>(
       skew(helpers, notSupported);
       boxShadow(helpers, notSupported);
       boxShadowColor(helpers, notSupported);
-      groupIsolate(helpers, notSupported);
+      // groupIsolate(helpers, notSupported);
       // parent(helpers, notSupported);
     };
   },
