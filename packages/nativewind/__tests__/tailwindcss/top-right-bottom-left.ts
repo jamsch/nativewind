@@ -19,16 +19,26 @@ const expectedValues: Record<string, number | string> = {
 
 tailwindRunner(
   "Layout - Top Right Bottom Left",
+  // @ts-expect-error number is expected
   createTests("inset-x", expectedValues, (n) => ({ right: n, left: n })),
+  // @ts-expect-error number is expected
   createTests("inset-y", expectedValues, (n) => ({ top: n, bottom: n })),
+  // @ts-expect-error number is expected
   createTests("top", expectedValues, (n) => ({ top: n })),
+  // @ts-expect-error number is expected
   createTests("right", expectedValues, (n) => ({ right: n })),
+  // @ts-expect-error number is expected
   createTests("bottom", expectedValues, (n) => ({ bottom: n })),
+  // @ts-expect-error number is expected
   createTests("left", expectedValues, (n) => ({ left: n })),
   createTests("inset", expectedValues, (n) => ({
+    // @ts-expect-error number is expected
     top: n,
+    // @ts-expect-error number is expected
     right: n,
+    // @ts-expect-error number is expected
     bottom: n,
+    // @ts-expect-error number is expected
     left: n,
   })),
 

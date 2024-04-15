@@ -8,17 +8,10 @@ import {
   ClassAttributes,
   ForwardRefExoticComponent,
   PropsWithoutRef,
-  useContext,
 } from "react";
-import { InteractionProps, useInteraction } from "./use-interaction";
-import { withStyledChildren } from "./with-styled-children";
 import { withStyledProps } from "./with-styled-props";
 import { useTailwind } from "./use-tailwind";
 import { StyleProp } from "react-native";
-import { StoreContext } from "../style-sheet";
-import { GroupContext, IsolateGroupContext } from "./group-context";
-import { useComponentState } from "./use-component-state";
-import { GROUP, GROUP_ISO, matchesMask } from "../utils/selector";
 import { Style } from "../types/common";
 
 export interface StyledOptions<
@@ -117,35 +110,18 @@ export function styled<
     }: StyledProps<T>,
     ref: ForwardedRef<unknown>
   ) {
-    const store = useContext(StoreContext);
-    const groupContext = useContext(GroupContext);
-    const isolateGroupContext = useContext(IsolateGroupContext);
-
     const classNameWithDefaults = baseClassName
       ? `${baseClassName} ${twClassName ?? propClassName}`
       : twClassName ?? propClassName;
 
     /**
-     * Get the hover/focus/active state of this component
-     */
-    const [componentState, dispatch] = useComponentState();
-
-    /**
      * Resolve the props/classProps/spreadProps options
      */
-    const {
-      styledProps,
-      mask: propsMask,
-      className,
-    } = withStyledProps<T, P, C>({
+    const { styledProps, className } = withStyledProps<T, P, C>({
       className: classNameWithDefaults,
-      preprocessed: store.preprocessed,
       propsToTransform,
       classProps,
-      componentProps: componentProps as unknown as Record<
-        P | C | string,
-        string
-      >,
+      componentProps: componentProps as Record<P | C | string, string>,
     });
 
     /**
@@ -154,67 +130,17 @@ export function styled<
     const style = useTailwind({
       className,
       inlineStyles,
-      ...componentState,
-      ...groupContext,
-      ...isolateGroupContext,
-    });
-
-    const mask = (style.mask || 0) | propsMask;
-
-    /**
-     * Determine if we need event handlers for our styles
-     */
-    const handlers = useInteraction(
-      dispatch,
-      mask,
-      componentProps as InteractionProps
-    );
-
-    /**
-     * Resolve the child styles
-     */
-    const children = withStyledChildren({
-      componentChildren,
-      componentState,
-      mask,
-      store,
-      stylesArray: style,
     });
 
     const element = createElement(Component, {
       ...componentProps,
-      ...handlers,
       ...styledProps,
       style: style.length > 0 ? style : undefined,
-      children,
+      children: componentChildren,
       ref,
-    } as unknown as T);
+    } as T);
 
-    let returnValue: ReactNode = element;
-
-    if (matchesMask(mask, GROUP)) {
-      returnValue = createElement(GroupContext.Provider, {
-        children: returnValue,
-        value: {
-          groupHover: groupContext.groupHover || componentState.hover,
-          groupFocus: groupContext.groupFocus || componentState.focus,
-          groupActive: groupContext.groupActive || componentState.active,
-        },
-      });
-    }
-
-    if (matchesMask(mask, GROUP_ISO)) {
-      returnValue = createElement(IsolateGroupContext.Provider, {
-        children: returnValue,
-        value: {
-          isolateGroupHover: componentState.hover,
-          isolateGroupFocus: componentState.focus,
-          isolateGroupActive: componentState.active,
-        },
-      });
-    }
-
-    return returnValue;
+    return element;
   }
 
   if (typeof Component !== "string") {

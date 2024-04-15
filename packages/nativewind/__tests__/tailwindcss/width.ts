@@ -30,9 +30,6 @@ tailwindRunner(
         topics: {
           "w-screen": ["width"],
         },
-        units: {
-          "w-screen": { width: "vw" },
-        },
       },
     ],
   ]

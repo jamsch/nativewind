@@ -16,9 +16,7 @@ export function extractStyles(
   let output: ExtractedValues = {
     styles: {},
     topics: {},
-    masks: {},
     atRules: {},
-    units: {},
     transforms: {},
     childClasses: {},
   };

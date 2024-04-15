@@ -1,5 +1,4 @@
 import { TextStyle } from "react-native";
-import { DARK_MODE, HOVER } from "../../src/utils/selector";
 import {
   createTestAppearance,
   // createTestDimensions,
@@ -45,37 +44,12 @@ describe("StyleSheetStore", () => {
     expect(store.getStyle("text-black")).toBe(store.getStyle("text-black"));
   });
 
-  test("can match pseudo-classes", () => {
-    const store = new TestStyleSheetRuntime({
-      styles: {
-        "hover:text-black": {
-          color: "black",
-        },
-      },
-      masks: {
-        "hover:text-black": HOVER,
-      },
-    });
-
-    expect(store.getTestStyle("hover:text-black")).toEqual([]);
-    expect(store.getTestStyle("hover:text-black", { hover: true })).toEqual([
-      { color: "black" },
-    ]);
-  });
-
   test("can react to changes in atRules", () => {
     const appearance = createTestAppearance();
 
     const store = new TestStyleSheetRuntime({
       styles: {
         "dark:text-black": { color: "black" },
-      },
-      appearance,
-      masks: {
-        "dark:text-black": DARK_MODE,
-      },
-      topics: {
-        "dark:text-black": ["colorScheme"],
       },
     });
 
@@ -97,13 +71,6 @@ describe("StyleSheetStore", () => {
         "text-white": staticText,
         "dark:text-black": atRuleText,
       },
-      masks: {
-        "dark:text-black": DARK_MODE,
-      },
-      topics: {
-        "dark:text-black": ["colorScheme"],
-      },
-      appearance,
     });
 
     expect(store.getTestStyle("text-white dark:text-black")).toEqual([
@@ -114,33 +81,6 @@ describe("StyleSheetStore", () => {
 
     expect(store.getTestStyle("text-white dark:text-black")).toEqual([
       staticText,
-      atRuleText,
-    ]);
-  });
-
-  test("test", () => {
-    const atRuleText = { backgroundColor: "black" };
-
-    const appearance = createTestAppearance();
-
-    const store = new TestStyleSheetRuntime({
-      styles: {
-        "dark:bg-black": atRuleText,
-      },
-      masks: {
-        "dark:bg-black": DARK_MODE,
-      },
-      topics: {
-        "dark:bg-black": ["colorScheme"],
-      },
-      appearance,
-    });
-
-    expect(store.getTestStyle("dark:bg-black")).toEqual([]);
-
-    appearance.change({ colorScheme: "dark" });
-
-    expect(store.getTestStyle("text-white dark:bg-black")).toEqual([
       atRuleText,
     ]);
   });

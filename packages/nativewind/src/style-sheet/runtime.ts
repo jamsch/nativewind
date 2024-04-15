@@ -10,26 +10,13 @@ import {
   ViewStyle,
   Platform,
   StyleProp,
-  I18nManager,
-  PlatformOSType,
   PlatformColor,
   PixelRatio,
 } from "react-native";
 
-import {
-  matchAtRule,
-  matchChildAtRule,
-  MatchChildAtRuleOptions,
-} from "./match-at-rule";
-import {
-  createAtRuleSelector,
-  getStateBit,
-  matchesMask,
-  StateBitOptions,
-} from "../utils/selector";
+import { matchAtRule } from "./match-at-rule";
+import { createAtRuleSelector } from "../utils/selector";
 import { MediaRecord } from "../types/common";
-import vh from "./units/vh";
-import vw from "./units/vw";
 import { ColorSchemeStore } from "./color-scheme";
 
 export type { ColorSchemeSystem, ColorSchemeName } from "./color-scheme";
@@ -45,21 +32,9 @@ export type EitherStyle<T extends Style = Style> =
 
 export type Snapshot = Record<string, StylesArray>;
 
-const emptyStyles: StylesArray = Object.assign([], { mask: 0 });
+const emptyStyles: StylesArray = Object.assign([], {});
 
-export interface StylesArray<T extends Style = Style>
-  extends Array<EitherStyle<T>> {
-  childClassNames?: string[];
-  mask?: number;
-}
-
-const units: Record<
-  string,
-  (value: string | number) => string | number | Record<string, unknown>
-> = {
-  vw,
-  vh,
-};
+export type StylesArray<T extends Style = Style> = Array<EitherStyle<T>>;
 
 /**
  * Tailwind styles are strings of atomic classes. eg "a b" compiles to [a, b]
@@ -98,12 +73,6 @@ export class StyleSheetRuntime extends ColorSchemeStore {
   styles: Record<string, Style> = {};
   atRules: MediaRecord = {};
   transforms: Record<string, true> = {};
-  topics: Record<string, Array<string>> = {};
-  childClasses: Record<string, Array<string>> = {};
-  masks: Record<string, number> = {};
-  units: Record<string, Record<string, string>> = {};
-
-  preprocessed = false;
 
   platform: typeof Platform.OS = Platform.OS;
   window: ScaledSize = Dimensions.get("window");
@@ -114,13 +83,6 @@ export class StyleSheetRuntime extends ColorSchemeStore {
     this.setDimensions(Dimensions);
     this.setAppearance(Appearance);
     this.setPlatform(Platform.OS);
-    this.setOutput({
-      web:
-        typeof StyleSheet.create({ test: {} }).test !== "number"
-          ? "css"
-          : "native",
-      default: "native",
-    });
   }
 
   setDimensions(dimensions: Dimensions) {
@@ -163,12 +125,6 @@ export class StyleSheetRuntime extends ColorSchemeStore {
 
   setPlatform(platform: typeof Platform.OS) {
     this.platform = platform;
-  }
-
-  setOutput(specifics: {
-    [platform in PlatformOSType | "default"]?: "css" | "native";
-  }) {
-    this.preprocessed = Platform.select(specifics) === "css";
   }
 
   setDangerouslyCompileStyles(
@@ -220,180 +176,58 @@ export class StyleSheetRuntime extends ColorSchemeStore {
     return a.every((style, index) => Object.is(style, b[index]));
   }
 
-  prepare(composedClassName?: string, options: StateBitOptions = {}): string {
+  prepare(composedClassName?: string): string {
     if (typeof composedClassName !== "string") {
       return "";
     }
 
-    if (this.preprocessed) {
-      return this.preparePreprocessed(composedClassName, options);
-    }
-
-    const stateBit = getStateBit(options);
-
-    const snapshotKey = `(${composedClassName}).${stateBit}`;
+    const snapshotKey = `(${composedClassName})`;
     if (this.snapshot[snapshotKey]) return snapshotKey;
 
     this.dangerouslyCompileStyles?.(composedClassName, this);
 
     const classNames = composedClassName.split(/\s+/);
-    const topics = new Set<string>();
 
-    for (const className of classNames) {
-      if (this.topics[className]) {
-        for (const topic of this.topics[className]) {
-          topics.add(topic);
-        }
-      }
-    }
-
-    const childStyles: string[] = [];
-
-    const reEvaluate = () => {
-      const styleArray: StylesArray = [];
-      const transformStyles: ViewStyle["transform"] = [];
-      styleArray.mask = 0;
-
-      const stateBit = getStateBit({
-        ...options,
-        darkMode: this.colorScheme === "dark",
-        rtl: I18nManager.isRTL,
-        platform: Platform.OS,
-      });
-
-      for (const className of classNames) {
-        const mask = this.masks[className] || 0;
-        styleArray.mask |= mask;
-
-        // If we match this class's state, then process it
-        if (matchesMask(stateBit, mask)) {
-          const classNameStyles = this.upsertAtomicStyle(className);
-
-          // Group transforms
-          if (this.transforms[className]) {
-            for (const a of classNameStyles) {
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              transformStyles.push(...(a as unknown as ViewStyle).transform!);
-            }
-          } else {
-            styleArray.push(...classNameStyles);
-          }
-
-          if (classNameStyles.childClassNames) {
-            childStyles.push(...classNameStyles.childClassNames);
-          }
-        }
-      }
-
-      if (transformStyles.length > 0) {
-        styleArray.push({
-          transform: transformStyles,
-        });
-      }
-
-      if (styleArray.length > 0 || childStyles.length > 0) {
-        if (childStyles.length > 0) {
-          styleArray.childClassNames = childStyles;
-        }
-
-        this.snapshot = {
-          ...this.snapshot,
-          [snapshotKey]: styleArray,
-        };
-      } else if (styleArray.mask === 0) {
-        this.snapshot = {
-          ...this.snapshot,
-          [snapshotKey]: emptyStyles,
-        };
-      } else {
-        this.snapshot = {
-          ...this.snapshot,
-          [snapshotKey]: styleArray,
-        };
-      }
-    };
-
-    reEvaluate();
-
-    if (topics.size > 0) {
-      this.subscribeMedia((notificationTopics: string[]) => {
-        if (notificationTopics.some((topic) => topics.has(topic))) {
-          reEvaluate();
-        }
-      });
-    }
+    this.reEvaluate(snapshotKey, classNames);
 
     return snapshotKey;
   }
 
-  preparePreprocessed(
-    className: string,
-    {
-      isolateGroupActive = false,
-      isolateGroupFocus = false,
-      isolateGroupHover = false,
-    } = {}
-  ): string {
-    if (this.snapshot[className]) return className;
+  reEvaluate = (snapshotKey: string, classNames: string[]) => {
+    const styleArray: StylesArray = [];
+    const transformStyles: ViewStyle["transform"] = [];
 
-    const classNames = [className];
+    for (const className of classNames) {
+      const classNameStyles = this.upsertAtomicStyle(className);
 
-    if (isolateGroupActive) classNames.push("group-isolate-active");
-    if (isolateGroupFocus) classNames.push("group-isolate-focus");
-    if (isolateGroupHover) classNames.push("group-isolate-hover");
-
-    const styleArray: StylesArray = [
-      {
-        $$css: true,
-        [className]: classNames.join(" "),
-      } as CompiledStyle,
-    ];
-    this.snapshot = {
-      ...this.snapshot,
-      [className]: styleArray,
-    };
-    return className;
-  }
-
-  getStyleArray(className: string): StylesArray {
-    let styles = this.styles[className];
-
-    /**
-     * Some RN platforms still use style ids. Unfortunately this means we cannot
-     * support transform or dynamic units.
-     *
-     * In these cases we need to call flatten on the style to return it to an object.
-     *
-     * This causes a minor performance issue for these styles, but it should only
-     * be a subset
-     */
-    if (this.units[className] || this.transforms[className]) {
-      styles = {
-        ...(typeof styles === "number" ? StyleSheet.flatten(styles) : styles),
-      };
-    }
-
-    if (this.units[className]) {
-      for (const [key, value] of Object.entries(styles)) {
-        const unitFunction = this.units[className][key]
-          ? units[this.units[className][key]]
-          : undefined;
-
-        if (unitFunction) {
-          (styles as Record<string, unknown>)[key] = unitFunction(value);
+      // Group transforms
+      if (this.transforms[className]) {
+        for (const a of classNameStyles) {
+          // @ts-expect-error transform is not in the ViewStyle type
+          transformStyles.push(...(a as ViewStyle).transform);
         }
+      } else {
+        styleArray.push(...classNameStyles);
       }
     }
 
-    // To keep things consistent, even atomic styles are arrays
-    const styleArray: StylesArray = styles ? [styles] : [];
-
-    if (this.childClasses[className]) {
-      styleArray.childClassNames = this.childClasses[className];
+    if (transformStyles.length > 0) {
+      styleArray.push({
+        transform: transformStyles,
+      });
     }
 
-    return styleArray;
-  }
+    this.snapshot =
+      styleArray.length > 0
+        ? {
+            ...this.snapshot,
+            [snapshotKey]: styleArray,
+          }
+        : {
+            ...this.snapshot,
+            [snapshotKey]: styleArray,
+          };
+  };
 
   /**
    * ClassNames are made of multiple atomic styles. eg "a b" are the styles [a, b]
@@ -405,7 +239,7 @@ export class StyleSheetRuntime extends ColorSchemeStore {
     if (this.snapshot[className]) return this.snapshot[className];
 
     // To keep things consistent, even atomic styles are arrays
-    const styleArray = this.getStyleArray(className);
+    const styleArray = this.styles[className] ? [this.styles[className]] : [];
 
     const atRulesTuple = this.atRules[className];
 
@@ -413,7 +247,7 @@ export class StyleSheetRuntime extends ColorSchemeStore {
     // We can add it to the snapshot and early exit.
     if (!atRulesTuple) {
       this.snapshot =
-        styleArray.length > 0 || styleArray.childClassNames?.length
+        styleArray.length > 0
           ? { ...this.snapshot, [className]: styleArray }
           : { ...this.snapshot, [className]: emptyStyles };
       return styleArray;
@@ -449,94 +283,28 @@ export class StyleSheetRuntime extends ColorSchemeStore {
       }
 
       this.snapshot =
-        newStyles.length > 0 || newStyles.childClassNames?.length
+        newStyles.length > 0
           ? { ...this.snapshot, [className]: newStyles }
           : { ...this.snapshot, [className]: emptyStyles };
 
       return newStyles;
     };
 
-    if (this.topics[className]) {
-      const topics = new Set(this.topics[className]);
-      this.subscribeMedia((notificationTopics: string[]) => {
-        if (notificationTopics.some((topic) => topics.has(topic))) {
-          reEvaluate();
-        }
-      });
-    }
-
     return reEvaluate();
-  }
-
-  getChildStyles<T extends Style>(
-    parent: StylesArray<T>,
-    options: MatchChildAtRuleOptions
-  ) {
-    if (!parent.childClassNames) return;
-
-    const styles: Style[] = [];
-    const classNames = new Set();
-
-    for (const className of parent.childClassNames) {
-      for (const [index, atRules] of this.atRules[className].entries()) {
-        const match = atRules.every(([rule, params]) => {
-          return matchChildAtRule(rule, params, options);
-        });
-
-        const stylesKey = createAtRuleSelector(className, index);
-        const style = this.styles[stylesKey];
-
-        if (match && style) {
-          classNames.add(className);
-
-          styles.push(style);
-        }
-      }
-    }
-
-    if (styles.length === 0) {
-      return;
-    }
-
-    const className = `${[...classNames].join(" ")}.child`;
-
-    if (this.snapshot[className]) return this.snapshot[className];
-    this.snapshot = { ...this.snapshot, [className]: styles };
-    return this.snapshot[className];
   }
 
   create({
     styles,
     atRules,
-    masks,
-    topics,
-    units,
-    childClasses,
     transforms,
-  }: Partial<
-    Pick<
-      StyleSheetRuntime,
-      | "styles"
-      | "atRules"
-      | "masks"
-      | "topics"
-      | "units"
-      | "childClasses"
-      | "transforms"
-    >
-  >) {
+  }: Partial<Pick<StyleSheetRuntime, "styles" | "atRules" | "transforms">>) {
     if (atRules) Object.assign(this.atRules, atRules);
-    if (masks) Object.assign(this.masks, masks);
-    if (topics) Object.assign(this.topics, topics);
-    if (childClasses) Object.assign(this.childClasses, childClasses);
-    if (units) Object.assign(this.units, units);
     if (transforms) Object.assign(this.transforms, transforms);
-
     if (styles) {
-      Object.assign(this.styles, StyleSheet.create(styles));
-      for (const className of Object.keys(styles)) {
-        this.upsertAtomicStyle(className);
-      }
+      Object.assign(this.styles, styles);
+      // for (const className of Object.keys(styles)) {
+      //   this.upsertAtomicStyle(className);
+      // }
     }
   }
 
