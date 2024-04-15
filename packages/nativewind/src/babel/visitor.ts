@@ -6,23 +6,19 @@ import { someAttributes } from "./utils/has-attribute";
 import { AllowPathOptions, TailwindcssReactNativeBabelOptions } from "./types";
 
 import {
+  arrayExpression,
   Expression,
   identifier,
   isJSXIdentifier,
   isJSXMemberExpression,
+  JSXAttribute,
   jSXAttribute,
-  jsxClosingElement,
   JSXElement,
-  jsxElement,
   jsxExpressionContainer,
-  JSXIdentifier,
   jSXIdentifier,
-  jsxIdentifier,
-  JSXMemberExpression,
-  JSXNamespacedName,
   JSXOpeningElement,
-  jsxOpeningElement,
   memberExpression,
+  stringLiteral,
 } from "@babel/types";
 import { PluginPass } from "@babel/core";
 
@@ -50,7 +46,7 @@ export const visitor: Visitor<VisitorState> = {
       if (
         isWrapper(path.node) ||
         !canTransform ||
-        !someAttributes(path, ["className", "tw"])
+        !someAttributes(path, ["className"])
       ) {
         return;
       }
@@ -63,21 +59,79 @@ export const visitor: Visitor<VisitorState> = {
 
       state.didTransform ||= true;
 
-      path.replaceWith(
-        jsxElement(
-          jsxOpeningElement(jsxIdentifier("_StyledComponent"), [
-            ...path.node.openingElement.attributes,
-            jSXAttribute(
-              jSXIdentifier("component"),
-              jsxExpressionContainer(
-                toExpression(path.node.openingElement.name)
-              )
-            ),
-          ]),
-          jsxClosingElement(jsxIdentifier("_StyledComponent")),
-          path.node.children
-        )
+      // path.replaceWith(
+      //   jsxElement(
+      //     jsxOpeningElement(jsxIdentifier("_StyledComponent"), [
+      //       ...path.node.openingElement.attributes,
+      //       jSXAttribute(
+      //         jSXIdentifier("component"),
+      //         jsxExpressionContainer(
+      //           toExpression(path.node.openingElement.name)
+      //         )
+      //       ),
+      //     ]),
+      //     jsxClosingElement(jsxIdentifier("_StyledComponent")),
+      //     path.node.children
+      //   )
+      // );
+
+      // Find className and style attributes
+      const classNameAttribute = path.node.openingElement.attributes.find(
+        (attribute) =>
+          attribute.type === "JSXAttribute" &&
+          attribute.name.name === "className"
+      ) as JSXAttribute;
+
+      if (!classNameAttribute) {
+        return;
+      }
+      // Extract className value
+
+      // @ts-expect-error - classNameAttribute is guaranteed to be a JSXAttribute
+      const className: string = classNameAttribute.value.value;
+
+      const styleAttribute = path.node.openingElement.attributes.find(
+        (attribute) =>
+          attribute.type === "JSXAttribute" && attribute.name.name === "style"
+      ) as JSXAttribute | undefined;
+
+      // TODO: if class name has multiple tokens, change to an array expression
+      const nativewindStylesExpression = memberExpression(
+        identifier("NW_STYLES"),
+        stringLiteral(className),
+        true
       );
+
+      // Create a new style attribute based on whether an existing one is found
+      const newStyle =
+        styleAttribute &&
+        styleAttribute.value &&
+        "expression" in styleAttribute.value
+          ? jSXAttribute(
+              jSXIdentifier("style"),
+              jsxExpressionContainer(
+                arrayExpression([
+                  styleAttribute.value.expression as Expression,
+                  nativewindStylesExpression,
+                ])
+              )
+            )
+          : jSXAttribute(
+              jSXIdentifier("style"),
+              jsxExpressionContainer(nativewindStylesExpression)
+            );
+
+      // Replace or add the new style attribute
+      if (styleAttribute) {
+        styleAttribute.value = newStyle.value;
+      }
+
+      path.node.openingElement.attributes.push(newStyle);
+      // Remove the "className" attribute
+      path.node.openingElement.attributes =
+        path.node.openingElement.attributes.filter(
+          (attribute) => attribute !== classNameAttribute
+        );
     },
   },
 };
@@ -104,22 +158,6 @@ function getElementName({ name }: JSXOpeningElement): string {
     return name.name;
   } else if (isJSXMemberExpression(name)) {
     return name.property.name;
-  } else {
-    // https://github.com/facebook/jsx/issues/13#issuecomment-54373080
-    throw new Error("JSXNamespacedName is not supported by React JSX");
-  }
-}
-
-function toExpression(
-  node: JSXIdentifier | JSXMemberExpression | JSXNamespacedName
-): Expression {
-  if (isJSXIdentifier(node)) {
-    return identifier(node.name);
-  } else if (isJSXMemberExpression(node)) {
-    return memberExpression(
-      toExpression(node.object),
-      toExpression(node.property)
-    );
   } else {
     // https://github.com/facebook/jsx/issues/13#issuecomment-54373080
     throw new Error("JSXNamespacedName is not supported by React JSX");
