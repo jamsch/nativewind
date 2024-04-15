@@ -83,16 +83,16 @@ export function serializer({
     [objectExpression(objectProperties)]
   );
 
-  const stylesAssignmentExpression = assignmentExpression(
-    "=",
-    identifier("NW_STYLES"),
-    stylesheet
-  );
+  // const stylesAssignmentExpression = assignmentExpression(
+  //   "=",
+  //   identifier("NW_STYLES"),
+  //   stylesheet
+  // );
 
   return {
     raw,
     hasStyles: Object.keys(rawStyles).length > 0,
-    stylesheetCreateExpression: stylesAssignmentExpression,
+    stylesheetCreateExpression: stylesheet,
   };
 }
 
