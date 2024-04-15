@@ -8,7 +8,6 @@ export function Test() {
     </_StyledComponent>
   );
 }
-
 _NativeWindStyleSheet.create({
   styles: {
     "w-screen": {
@@ -17,10 +16,5 @@ _NativeWindStyleSheet.create({
   },
   topics: {
     "w-screen": ["width"],
-  },
-  units: {
-    "w-screen": {
-      width: "vw",
-    },
   },
 });

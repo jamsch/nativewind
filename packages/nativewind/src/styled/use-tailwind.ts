@@ -1,7 +1,6 @@
 import { useContext, useMemo } from "react";
 import { StyleProp, StyleSheet } from "react-native";
-import { useSyncExternalStoreWithSelector } from "use-sync-external-store/shim/with-selector";
-import { Snapshot, StoreContext, StylesArray } from "../style-sheet";
+import { StoreContext, StylesArray } from "../style-sheet";
 import { Style } from "../style-sheet/runtime";
 import { StateBitOptions } from "../utils/selector";
 
@@ -16,64 +15,17 @@ export function useTailwind<T extends Style>({
   className,
   inlineStyles,
   additionalStyles,
-  hover,
-  focus,
-  active,
-  isolateGroupHover,
-  isolateGroupFocus,
-  isolateGroupActive,
-  groupHover,
-  groupFocus,
-  groupActive,
   flatten,
 }: UseTailwindOptions<T>): StylesArray<T> {
   const store = useContext(StoreContext);
-
-  const [subscribe, getSnapshot, selector] = useMemo(() => {
-    const selector = store.prepare(className, {
-      hover,
-      focus,
-      active,
-      isolateGroupHover,
-      isolateGroupFocus,
-      isolateGroupActive,
-      groupHover,
-      groupFocus,
-      groupActive,
-    });
-
-    return [
-      store.subscribe,
-      store.getSnapshot,
-      (snapshot: Snapshot): StylesArray | undefined => snapshot[selector],
-    ];
-  }, [
-    store,
-    className,
-    hover,
-    focus,
-    active,
-    isolateGroupHover,
-    isolateGroupFocus,
-    isolateGroupActive,
-    groupHover,
-    groupFocus,
-    groupActive,
-  ]);
-
-  const styles = useSyncExternalStoreWithSelector(
-    subscribe,
-    getSnapshot,
-    getSnapshot,
-    selector
-  );
+  const selector = useMemo(() => store.prepare(className), [className]);
+  const styles = store.snapshot[selector];
 
   return useMemo(() => {
     const stylesArray: StylesArray = [];
 
     if (styles) {
       stylesArray.push(...styles);
-      stylesArray.childClassNames = styles.childClassNames;
     }
 
     if (additionalStyles) {
@@ -84,12 +36,9 @@ export function useTailwind<T extends Style>({
     }
 
     if (flatten) {
-      const flatStyles: StylesArray = [StyleSheet.flatten(stylesArray)];
-      flatStyles.mask = styles?.mask;
-      return flatStyles;
+      return [StyleSheet.flatten(stylesArray)];
     }
 
-    stylesArray.mask = styles?.mask;
     return stylesArray;
   }, [styles, inlineStyles, additionalStyles, flatten]) as StylesArray<T>;
 }

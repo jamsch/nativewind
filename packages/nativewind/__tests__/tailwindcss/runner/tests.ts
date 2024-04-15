@@ -7,7 +7,7 @@ export function expectError(names: string[]): Test[] {
   return names.map((name) => [name, {}, true]);
 }
 
-export function createTests<T extends string | number | ColorValue | undefined>(
+export function createTests<T>(
   prefix: string,
   suffixes: Record<string, T>,
   valueFunction: (n: T, suffix: string) => Style

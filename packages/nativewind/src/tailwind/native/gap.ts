@@ -8,14 +8,7 @@ export const gap: CustomPluginFunction = ({ matchUtilities, theme }) => {
         value = value === "px" ? "1px" : value;
 
         return {
-          "&": {
-            marginLeft: `-${value}`,
-            marginTop: `-${value}`,
-            "@selector (> *)": {
-              marginLeft: value,
-              marginTop: value,
-            },
-          },
+          gap: value,
         };
       },
       "gap-x": (value: string) => {
@@ -23,12 +16,7 @@ export const gap: CustomPluginFunction = ({ matchUtilities, theme }) => {
         value = value === "px" ? "1px" : value;
 
         return {
-          "&": {
-            "margin-left": `-${value}`,
-            "@selector (> *)": {
-              "margin-left": value,
-            },
-          },
+          columnGap: value,
         };
       },
       "gap-y": (value: string) => {
@@ -36,12 +24,7 @@ export const gap: CustomPluginFunction = ({ matchUtilities, theme }) => {
         value = value === "px" ? "1px" : value;
 
         return {
-          "&": {
-            "margin-top": `-${value}`,
-            "@selector (> *)": {
-              "margin-top": value,
-            },
-          },
+          rowGap: value,
         };
       },
     },

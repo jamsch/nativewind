@@ -6,16 +6,13 @@ import {
   ScaledSize,
 } from "react-native";
 import { StyleSheetRuntime } from "../../src/style-sheet/runtime";
-import { StateBitOptions } from "../../src/utils/selector";
 
 type StyleSheetRuntimeCreate = Parameters<StyleSheetRuntime["create"]>[0];
 
 export interface TestStyleSheetStoreConstructor
   extends StyleSheetRuntimeCreate {
   dimensions?: Dimensions;
-  appearance?: typeof Appearance;
   platform?: typeof Platform.OS;
-  preprocessed?: boolean;
 
   // This is used for tests & snack demos
   dangerouslyCompileStyles?: StyleSheetRuntime["dangerouslyCompileStyles"];
@@ -24,24 +21,12 @@ export interface TestStyleSheetStoreConstructor
 export class TestStyleSheetRuntime extends StyleSheetRuntime {
   constructor({
     styles,
-    atRules,
-    topics,
-    masks,
-    childClasses,
     dimensions,
-    appearance,
     dangerouslyCompileStyles,
-    preprocessed,
   }: TestStyleSheetStoreConstructor) {
     super();
-    this.create({ styles, atRules, topics, masks, childClasses });
+    this.create({ styles });
     if (dimensions) this.setDimensions(dimensions);
-    if (appearance) this.setAppearance(appearance);
-    if (preprocessed) {
-      this.setOutput({ default: "css" });
-    } else {
-      this.setOutput({ default: "native" });
-    }
 
     if (dangerouslyCompileStyles) {
       this.setDangerouslyCompileStyles(dangerouslyCompileStyles);
@@ -49,8 +34,8 @@ export class TestStyleSheetRuntime extends StyleSheetRuntime {
   }
 
   // Helper to easily retrieve a style from the latest snapshot
-  getStyle(className: string, options?: StateBitOptions) {
-    const selector = this.prepare(className, options);
+  getStyle(className: string) {
+    const selector = this.prepare(className);
     return this.getSnapshot()[selector];
   }
 
@@ -58,8 +43,8 @@ export class TestStyleSheetRuntime extends StyleSheetRuntime {
   // the results with toEqual
   //
   // Note: If you want check the stability of results, you need to use getStyle()
-  getTestStyle(className: string, options?: StateBitOptions) {
-    return [...this.getStyle(className, options)];
+  getTestStyle(className: string) {
+    return [...this.getStyle(className)];
   }
 }
 

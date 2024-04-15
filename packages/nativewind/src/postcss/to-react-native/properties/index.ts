@@ -64,6 +64,9 @@ export const properties = {
   top: only<"top">({ number: true, units: ["px", "%"] }),
   left: only<"left">({ number: true, units: ["px", "%"] }),
   right: only<"right">({ number: true, units: ["px", "%"] }),
+  gap: only<"gap">({ number: true, units: ["px"] }),
+  columnGap: only<"columnGap">({ number: true, units: ["px"] }),
+  rowGap: only<"rowGap">({ number: true, units: ["px"] }),
   margin: only<"margin">({ number: true, units: ["px", "%"], auto: true }),
   marginBottom: only<"marginBottom">({
     number: true,

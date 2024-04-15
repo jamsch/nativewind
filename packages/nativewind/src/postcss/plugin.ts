@@ -1,13 +1,8 @@
 import { Plugin, PluginCreator } from "postcss";
-import {
-  createAtRuleSelector,
-  getSelectorMask,
-  normalizeCssSelector,
-} from "../utils/selector";
+import { createAtRuleSelector, normalizeCssSelector } from "../utils/selector";
 import { toReactNative } from "./to-react-native";
 import { StyleRecord, Style, StyleError, AtRuleTuple } from "../types/common";
 import { outputWriter } from "./fs-writer";
-import { StyleSheetRuntime } from "../style-sheet";
 import { getRuntime } from "./get-runtime";
 
 const atRuleSymbol = Symbol("media");
@@ -23,8 +18,6 @@ declare module "postcss" {
 export interface ExtractedValues {
   styles: StyleRecord;
   topics: Record<string, Array<string>>;
-  masks: Record<string, number>;
-  units: StyleSheetRuntime["units"];
   childClasses: Record<string, string[]>;
   atRules: Record<string, Array<AtRuleTuple[]>>;
   transforms: Record<string, true>;
@@ -46,8 +39,6 @@ export const plugin: PluginCreator<PostcssPluginOptions> = ({
   const styles: DoneResult["styles"] = {};
   const topics: Record<string, Set<string>> = {};
   const childClasses: Record<string, string[]> = {};
-  const masks: DoneResult["masks"] = {};
-  const units: DoneResult["units"] = {};
   const atRules: DoneResult["atRules"] = {};
   const transforms: DoneResult["transforms"] = {};
   const errors: DoneResult["errors"] = [];
@@ -86,24 +77,18 @@ export const plugin: PluginCreator<PostcssPluginOptions> = ({
           const hasTransformRules = Boolean(nativeDeclarations.transform);
 
           for (const s of node.selectors) {
-            const mask = getSelectorMask(s, s.includes('[dir="rtl"]'));
             const rules = node.parent?.[atRuleSymbol];
 
-            const {
-              declarations,
-              units: selectorUnits,
-              topics: selectorTopics,
-            } = getRuntime(s, nativeDeclarations, rules);
+            const { declarations, topics: selectorTopics } = getRuntime(
+              s,
+              nativeDeclarations,
+              rules
+            );
 
             let selector = normalizeCssSelector(s);
 
             if (hasTransformRules) {
               transforms[selector] = true;
-            }
-
-            if (mask > 0) {
-              masks[selector] ??= 0;
-              masks[selector] |= mask;
             }
 
             if (node.parent?.[isForChildrenSymbol]) {
@@ -129,10 +114,6 @@ export const plugin: PluginCreator<PostcssPluginOptions> = ({
               );
             }
 
-            if (selectorUnits) {
-              units[selector] = selectorUnits;
-            }
-
             styles[selector] = declarations;
           }
         }
@@ -147,22 +128,18 @@ export const plugin: PluginCreator<PostcssPluginOptions> = ({
       if (done)
         done({
           styles,
-          masks,
           atRules,
           childClasses,
           transforms,
           topics: arrayTopics,
-          units,
           errors,
         });
 
       if (output) {
         outputWriter(output, {
           styles,
-          masks,
           atRules,
           childClasses,
-          units,
           transforms,
           topics: arrayTopics,
         });

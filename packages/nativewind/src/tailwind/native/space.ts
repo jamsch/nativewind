@@ -6,35 +6,11 @@ export const space: CustomPluginFunction = (
 ) => {
   matchUtilities(
     {
-      "space-x": (value: string) => {
-        if (value === "reverse") {
-          return notSupported("space-x-reverse")();
-        }
-
-        value = value === "0" ? "0px" : value;
-
-        return {
-          "&": {
-            "@selector (> *:not(:first-child))": {
-              "margin-left": value,
-            },
-          },
-        };
+      "space-x": () => {
+        return notSupported("space-x")();
       },
-      "space-y": (value: string) => {
-        if (value === "reverse") {
-          return notSupported("space-y-reverse")();
-        }
-
-        value = value === "0" ? "0px" : value;
-
-        return {
-          "&": {
-            "@selector (> *:not(:first-child))": {
-              "margin-top": value,
-            },
-          },
-        };
+      "space-y": () => {
+        return notSupported("space-y")();
       },
     },
     { values: { ...theme("space"), reverse: "reverse" } }

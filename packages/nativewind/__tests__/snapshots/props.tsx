@@ -95,26 +95,8 @@ describe("Styled", () => {
 
   test("classProps on css", () => {
     const tree = render(
-      <TestProvider preprocessed>
-        <TestClassPropsComponent className="p-4" style2="m-1" />
-      </TestProvider>
-    ).toJSON();
-
-    expect(tree).toMatchSnapshot();
-  });
-
-  test("skip null in child styles", () => {
-    const tree = render(
       <TestProvider>
-        <StyledView className="space-x-2">
-          {
-            // eslint-disable-next-line unicorn/no-null
-            null
-          }
-          <Text>1</Text>
-          {undefined}
-          <Text>2</Text>
-        </StyledView>
+        <TestClassPropsComponent className="p-4" style2="m-1" />
       </TestProvider>
     ).toJSON();
 

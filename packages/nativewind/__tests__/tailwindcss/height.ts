@@ -30,9 +30,9 @@ tailwindRunner(
         topics: {
           "h-screen": ["height"],
         },
-        units: {
-          "h-screen": { height: "vh" },
-        },
+        // units: {
+        //   "h-screen": { height: "vh" },
+        // },
       },
     ],
   ]

@@ -1,5 +1,6 @@
 import {
   arrayExpression,
+  assignmentExpression,
   booleanLiteral,
   callExpression,
   Expression,
@@ -20,8 +21,6 @@ import { ExtractedValues } from "./plugin";
 export function serializer({
   styles: rawStyles,
   atRules,
-  masks,
-  units,
   topics,
   childClasses,
   transforms,
@@ -30,7 +29,6 @@ export function serializer({
 
   for (const [key, style] of Object.entries(rawStyles)) {
     serializedStyles[key] = {};
-
     for (const [k, v] of Object.entries(style)) {
       serializedStyles[key][k] = v;
     }
@@ -63,24 +61,10 @@ export function serializer({
     );
   }
 
-  if (Object.keys(masks).length > 0) {
-    raw.masks = masks;
-    objectProperties.push(
-      objectProperty(identifier("masks"), babelSerializeLiteral(masks))
-    );
-  }
-
   if (Object.keys(topics).length > 0) {
     raw.topics = topics;
     objectProperties.push(
       objectProperty(identifier("topics"), babelSerializeLiteral(topics))
-    );
-  }
-
-  if (Object.keys(units).length > 0) {
-    raw.units = units;
-    objectProperties.push(
-      objectProperty(identifier("units"), babelSerializeLiteral(units))
     );
   }
 
@@ -94,16 +78,21 @@ export function serializer({
     );
   }
 
+  const stylesheet = callExpression(
+    memberExpression(identifier("_NativeWindStyleSheet"), identifier("create")),
+    [objectExpression(objectProperties)]
+  );
+
+  const stylesAssignmentExpression = assignmentExpression(
+    "=",
+    identifier("NW_STYLES"),
+    stylesheet
+  );
+
   return {
     raw,
     hasStyles: Object.keys(rawStyles).length > 0,
-    stylesheetCreateExpression: callExpression(
-      memberExpression(
-        identifier("_NativeWindStyleSheet"),
-        identifier("create")
-      ),
-      [objectExpression(objectProperties)]
-    ),
+    stylesheetCreateExpression: stylesAssignmentExpression,
   };
 }
 

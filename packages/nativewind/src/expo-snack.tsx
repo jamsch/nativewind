@@ -1,4 +1,4 @@
-import React, { ComponentType, PropsWithChildren } from "react";
+import { ComponentType, PropsWithChildren } from "react";
 import { Platform } from "react-native";
 import { Config } from "tailwindcss";
 import { NativeWindStyleSheet, StyleSheetRuntime } from "./style-sheet";
@@ -52,8 +52,7 @@ export function withExpoSnack(
         for (const key of Object.keys(store.snapshot)) {
           if (key.includes(css)) {
             delete store.snapshot[key];
-            const [, bit] = key.split(".");
-            store.prepare(css, { baseBit: Number.parseInt(bit) });
+            store.prepare(css);
           }
         }
         store.notify();
@@ -65,9 +64,6 @@ export function withExpoSnack(
 
   if (!canUseCSS) {
     NativeWindStyleSheet.setDangerouslyCompileStyles(dangerouslyCompileStyles);
-    NativeWindStyleSheet.setOutput({
-      default: "native",
-    });
   }
 
   return () => (
